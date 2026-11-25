@@ -22,14 +22,25 @@ if (!existsSync(source)) {
   process.exit(1);
 }
 
+// Read and validate before copying: a POST.json holding the starter's placeholder is not a post's address, and a
+// grader that received one would only learn about it after the round trip.
+const POST_URL = /^https:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/[A-Za-z0-9_]{1,15}\/status\/\d{1,25}$/;
+
+let handed: { url?: unknown };
+try {
+  handed = JSON.parse(readFileSync(source, 'utf8'));
+} catch (err) {
+  console.error(`POST.json at ${source} is not readable JSON: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+if (typeof handed.url !== 'string' || !POST_URL.test(handed.url)) {
+  console.error(`POST.json at ${source} does not name a post on X: ${JSON.stringify(handed.url)}`);
+  process.exit(1);
+}
+
 mkdirSync(OUTPUT_DIR, { recursive: true });
 copyFileSync(source, target);
 
 // Print what was handed in, so the run's own log shows the post the gate will read.
-try {
-  const handed = JSON.parse(readFileSync(target, 'utf8'));
-  console.log(`handed in ${handed.url}`);
-} catch (err) {
-  console.error(`POST.json at ${target} is not readable JSON: ${(err as Error).message}`);
-  process.exit(1);
-}
+console.log(`handed in ${handed.url}`);
